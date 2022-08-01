@@ -19,23 +19,25 @@ import posmy.interview.boot.model.User;
 import posmy.interview.boot.repository.UserRepository;
 
 @Service
-public class SecurityUserDetailsService implements UserDetailsService { 
-   @Autowired 
-   private UserRepository userRepository; 
-   
-   @Bean
-public BCryptPasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-}
-   
-   @Override 
-   public UserDetails loadUserByUsername(String username) 
-   throws UsernameNotFoundException { 
-      User user = userRepository.findUserByUsername(username) 
-         .orElseThrow(() -> new UsernameNotFoundException("User not present")); 
-         return user; 
-   } 
-   public void createUser(UserDetails user) { 
-      userRepository.save((User) user); 
-   } 
+public class SecurityUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username)
+            throws UsernameNotFoundException {
+        User user = userRepository.findUserByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not present"));
+        return user;
+    }
+
+    public void createUser(UserDetails user) {
+        userRepository.save((User) user);
+    }
 }
