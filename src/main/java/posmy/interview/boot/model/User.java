@@ -20,8 +20,8 @@ import org.springframework.security.core.userdetails.UserDetails;
  * @author afdzal
  *
  */
-@Getter
-@Setter
+//@Getter
+//@Setter
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
@@ -50,17 +50,25 @@ public class User implements UserDetails {
 
     @Override
     public String getPassword() {
-        return password; 
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     @Override
     public String getUsername() {
-        return username; 
+        return username;
     }
+    
+       public void setUsername(String username) { 
+      this.username = username; 
+   } 
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; 
+        return true;
     }
 
     @Override
@@ -70,12 +78,20 @@ public class User implements UserDetails {
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; 
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return true; 
+        return true;
+    }
+
+    public void setAccountNonLocked(Boolean accountNonLocked) {
+        this.accountNonLocked = accountNonLocked;
+    }
+
+    public boolean getAccountNonLocked() {
+        return accountNonLocked;
     }
 
 }
