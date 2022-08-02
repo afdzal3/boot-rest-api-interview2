@@ -2,12 +2,16 @@ package posmy.interview.boot.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import posmy.interview.boot.domain.Books;
+import posmy.interview.boot.domain.Users;
 import posmy.interview.boot.repo.BookRepository;
+import posmy.interview.boot.service.UserService;
 
+import javax.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -20,11 +24,15 @@ import java.util.Optional;
 public class BookController {
 
     private final BookRepository bookRepository;
+    private final UserService userService;
 
-    public BookController(BookRepository bookRepository) {
+    public BookController(BookRepository bookRepository, UserService userService) {
         this.bookRepository = bookRepository;
+        this.userService = userService;
     }
 
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/books")
     public ResponseEntity<Books> createBooks(@RequestBody Books books) throws URISyntaxException {
         if (books.getId() != null) {
@@ -36,6 +44,7 @@ public class BookController {
                 .body(result);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/books/{id}")
     public ResponseEntity<Books> updateBooks(
             @PathVariable(value = "id", required = false) final Long id,
@@ -58,19 +67,29 @@ public class BookController {
                 .body(result);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/books")
-    public List<Books> getAllReservations() {
+    public List<Books> getAllBooks() {
         return bookRepository.findAll();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/books/{id}")
-    public ResponseEntity<Books> getReservation(@PathVariable Long id) {
-        Optional<Books> reservation = bookRepository.findById(id);
-        return ResponseEntity.ok(reservation.get());
+    public ResponseEntity<Books> getBook(@PathVariable Long id) {
+        Optional<Books> Book = bookRepository.findById(id);
+        return ResponseEntity.ok(Book.get());
     }
 
+    @GetMapping("/booksByUser")
+    public List<Books> getBooksByUser(HttpServletRequest req) {
+        Users users = userService.whoami(req);
+        List<Books> books = bookRepository.findAllByUsersAndStatus(users, "BORROWED");
+        return books;
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/books/{id}")
-    public ResponseEntity<Void> deleteReservation(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
         bookRepository.deleteById(id);
         return ResponseEntity
                 .noContent()

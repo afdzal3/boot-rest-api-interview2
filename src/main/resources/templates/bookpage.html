@@ -1,9 +1,11 @@
 <!doctype html>
 <html>
 <head>
-  <title>PHP REST API MySQL AJAX jQuery CRUD</title>
+  <title>Spring API MySQL AJAX jQuery CRUD</title>
   <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
   <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
   <style>
     .input-group {
       margin: 10px 0px 10px 0px;
@@ -31,14 +33,34 @@
     }
   </style>
   <script type="text/javascript">
+
     $(document).ready(function() {
+
+      $.ajaxSetup({
+        headers : {
+          'Authorization' : 'Bearer ' + $.cookie('token'),
+        }
+      });
+
+
+      $('#logout').click(function(){
+        $.cookie('token', null)
+        $(location).prop('href', '/')
+      })
+
+      $('#addMember').click(function(){
+        $(location).prop('href', '/add-book-member')
+      })
+
       $.getJSON('/api/books', function(json) {
         var tr=[];
         for (var i = 0; i < json.length; i++) {
+          var email = json[i].users != null ? json[i].users.email : '';
           tr.push('<tr>');
           tr.push('<td>' + json[i].id + '</td>');
           tr.push('<td>' + json[i].name + '</td>');
           tr.push('<td>' + json[i].status + '</td>');
+           tr.push('<td>' + email + '</td>');
           tr.push('<td><button class=\'edit\'>Edit</button>&nbsp;&nbsp;<button class=\'delete\' id=' + json[i].id + '>Delete</button></td>');
           tr.push('</tr>');
         }
@@ -47,12 +69,10 @@
 
       $(document).delegate('#addNew', 'click', function(event) {
         event.preventDefault();
-
         var name = $('#name').val();
-        var status = $('#status').val();
 
         if(name == null || name == "") {
-          alert("Company Name is required");
+          alert("Name is required");
           return;
         }
 
@@ -60,7 +80,7 @@
           type: "POST",
           contentType: "application/json; charset=utf-8",
           url: "/api/books",
-          data: JSON.stringify({'name': name, 'status': status}),
+          data: JSON.stringify({'name': name, 'status': 'AVAILABLE'}),
           cache: false,
           success: function(result) {
             alert('Company added successfully');
@@ -94,44 +114,61 @@
       });
 
       $(document).delegate('.edit', 'click', function() {
-        // console.log("test")
-        var parent = $(this).parent().parent();
+        var resultData=["AVAILABLE","BORROWED"]
+        var myselect = $('<select id="selectAvailability">');
+        var myselectUser = $('<select id="borrowedby">');
 
+        $.each(resultData, function(index, key) {
+          myselect.append( $('<option></option>').val(key).html(key) );
+        });
+
+        $.ajax({
+          type: "GET",
+          contentType: "application/json; charset=utf-8",
+          url: "/users/userList",
+          cache: false,
+          async: false,
+          success: function(result) {
+            $.each(result, function(index, res) {
+              console.log(res);
+              myselectUser.append( $('<option></option>').val(res.id).html(res.email) );
+            });
+          },
+          error: function(err) {
+            alert(err);
+          }
+        });
+
+        var parent = $(this).parent().parent();
         var id = parent.children("td:nth-child(1)");
         var name = parent.children("td:nth-child(2)");
         var status = parent.children("td:nth-child(3)");
-        var buttons = parent.children("td:nth-child(4)");
+        var borrowed1 = parent.children("td:nth-child(4)");
+        var buttons = parent.children("td:nth-child(5)");
 
         name.html("<input type='text' id='txtName' value='" + name.html() + "'/>");
-        status.html("<input type='checkbox' id='txtStatus' checked value='" + 'AVAILABLE' + "'/>");
-
+        status.html('');
+        status.append(myselect)
+        borrowed1.html('');
+        borrowed1.append(myselectUser)
         buttons.html("<button id='save'>Save</button>&nbsp;&nbsp;<button class='delete' id='" + id.html() + "'>Delete</button>");
       });
 
       $(document).delegate('#save', 'click', function() {
         var parent = $(this).parent().parent();
-
         var id = parent.children("td:nth-child(1)");
         var name = parent.children("td:nth-child(2)");
-        var status = parent.children("td:nth-child(3)");
-        var buttons = parent.children("td:nth-child(4)");
-
-        console.log(status.children("input[type=checkbox]").val())
-        var borrowed = 'AVAILABLE';
-        if ($('input[type=checkbox]').is(":checked"))
-        {
-          borrowed = 'BORROWED';
-        }
+        var statusVal = $('#selectAvailability :selected').val();
+        var borrowedby = $('#borrowedby :selected').val();
 
         $.ajax({
           type: "PUT",
           contentType: "application/json; charset=utf-8",
           url: "/api/books/" + id.html(),
-          data: JSON.stringify({'id' : id.html(), 'name' : name.children("input[type=text]").val(), 'status' : status.children("input[type=text]").val()}),
+          data: JSON.stringify({'id' : id.html(), 'name' : name.children("input[type=text]").val(), 'status' : statusVal, 'users' : {'id' : parseInt(borrowedby)}}),
           cache: false,
           success: function() {
-            name.html(name.children("input[type=text]").val());
-            buttons.html("<button class='edit' id='" + id.html() + "'>Edit</button>&nbsp;&nbsp;<button class='delete' id='" + id.html() + "'>Delete</button>");
+            location.reload();
           },
           error: function() {
             alert('Error updating record');
@@ -151,8 +188,6 @@
   <label>Book Name</label>
   <input type="text" id="name" name="name" value="">
 
-  <label>Book Status</label>
-  <input type="text" id="status" name="status" value="">
 </div>
 <div class="input-group">
   <button class="btn" type="button" id="addNew">Save</button>
@@ -165,9 +200,13 @@
     <th>Id</th>
     <th>Name</th>
     <th>Status</th>
+    <th>Borrowed By</th>
     <th>Actions</th>
   </tr>
 </table>
 
+<input style="margin-top: 30px" id="addMember" class="btn" type="submit" value="Add Member">
+
+<input style="margin-top: 30px" id="logout" class="btn" type="submit" value="Logout">
 </body>
 </html>

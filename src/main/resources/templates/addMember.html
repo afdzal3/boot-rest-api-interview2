@@ -1,10 +1,209 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Add Book memeber</title>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <style>
+        .input-group {
+            margin: 10px 0px 10px 0px;
+        }
+        .input-group label {
+            display: block;
+            text-align: left;
+            margin: 3px;
+        }
+        .input-group input {
+            height: 30px;
+            width: 300px;
+            padding: 5px 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid gray;
+        }
+        .btn {
+            padding: 10px;
+            font-size: 15px;
+            color: white;
+            background: #5F9EA0;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $.ajaxSetup({
+                headers : {
+                    'Authorization' : 'Bearer ' + $.cookie('token'),
+                }
+            });
+
+            $('#logout').click(function(){
+                $.cookie('token', null)
+                $(location).prop('href', '/')
+            })
+
+            $('#back-page').click(function(){
+                $(location).prop('href', '/bookpage')
+            })
+
+
+
+            $.getJSON('/users/userList', function(json) {
+                var tr=[];
+                for (var i = 0; i < json.length; i++) {
+                    tr.push('<tr>');
+                    tr.push('<td>' + json[i].id + '</td>');
+                    tr.push('<td>' + json[i].firstname + '</td>');
+                    tr.push('<td>' + json[i].lastname + '</td>');
+                    tr.push('<td>' + json[i].email + '</td>');
+                    tr.push('<td><button class=\'edit\'>Edit</button>&nbsp;&nbsp;<button class=\'delete\' id=' + json[i].email + '>Delete</button></td>');
+                    tr.push('</tr>');
+                }
+                $('table').append($(tr.join('')));
+            });
+
+            $(document).delegate('#addNew', 'click', function(event) {
+                event.preventDefault();
+                var firstname = $('#firstname').val();
+                var lastname = $('#lastname').val();
+                var email = $('#email').val();
+                var password = $('#password').val();
+
+
+                if(firstname == null || firstname == "") {
+                    alert("First Name is required");
+                    return;
+                }
+
+                if(email == null || email == "") {
+                    alert("Email is required");
+                    return;
+                }
+
+                if(password == null || password == "") {
+                    alert("password is required");
+                    return;
+                }
+
+                $.ajax({
+                    type: "POST",
+                    contentType: "application/json; charset=utf-8",
+                    url: "/users/signup",
+                    data: JSON.stringify({'firstname': firstname, 'lastname': lastname, 'email': email, password: password, "appUserRoles": ["ROLE_CLIENT"]}),
+                    cache: false,
+                    success: function(result) {
+                        alert('added successfully');
+                        location.reload(true);
+                    },
+                    error: function(err) {
+                        console.log(err)
+                        alert(err);
+                    }
+                });
+            });
+
+            $(document).delegate('.delete', 'click', function() {
+                if (confirm('Do you really want to delete record?')) {
+                    // var id = $(this).attr('id');
+                    var username = $(this).attr('id');
+                    var parent = $(this).parent().parent();
+                    $.ajax({
+                        type: "DELETE",
+                        url: "/users/delete?username=" + username,
+                        cache: false,
+                        success: function() {
+                            parent.fadeOut('slow', function() {
+                                $(this).remove();
+                            });
+                            // location.reload(true)
+                        },
+                        error: function() {
+                            alert('Error deleting record');
+                        }
+                    });
+                }
+            });
+
+            $(document).delegate('.edit', 'click', function() {
+                var parent = $(this).parent().parent();
+                var id = parent.children("td:nth-child(1)");
+                var firstName = parent.children("td:nth-child(2)");
+                var lastName = parent.children("td:nth-child(3)");
+                var email = parent.children("td:nth-child(4)");
+                var buttons = parent.children("td:nth-child(5)");
+                firstName.html("<input type='text' id='txtName' value='" + firstName.html() + "'/>");
+                lastName.html("<input type='text' id='txtName' value='" + lastName.html() + "'/>");
+                email.html("<input type='text' id='txtName' value='" + email.html() + "' readonly/>");
+                buttons.html("<button id='save'>Save</button>&nbsp;&nbsp;<button class='delete' id='" + id.html() + "'>Delete</button>");
+            });
+
+            $(document).delegate('#save', 'click', function() {
+                var parent = $(this).parent().parent();
+                var id = parent.children("td:nth-child(1)");
+                var firstname = parent.children("td:nth-child(2)");
+                var lastname = parent.children("td:nth-child(3)");
+                var buttons = parent.children("td:nth-child(5)");
+
+                console.log(id.html())
+                console.log(firstname.children("input[type=text]").val())
+                console.log(lastname.children("input[type=text]").val())
+
+                $.ajax({
+                    type: "PUT",
+                    contentType: "application/json; charset=utf-8",
+                    url: "/users/updateUser",
+                    data: JSON.stringify({'id' : id.html(), 'firstname' : firstname.children("input[type=text]").val(), 'lastname' : lastname.children("input[type=text]").val()}),
+                    cache: false,
+                    success: function() {
+                        location.reload();
+                        // name.html(name.children("input[type=text]").val());
+                        // buttons.html("<button class='edit' id='" + id.html() + "'>Edit</button>&nbsp;&nbsp;<button class='delete' id='" + id.html() + "'>Delete</button>");
+                    },
+                    error: function() {
+                        alert('Error updating record');
+                    }
+                });
+            });
+
+        });
+    </script>
 </head>
 <body>
+
+<h2>Add Book memeber</h2>
+
+<h3>Add a New Member</h3>
+<div class="input-group">
+    <label>First Name</label>
+    <input type="text" id="firstname" name="firstname" value="">
+    <label>Last Name</label>
+    <input type="text" id="lastname" name="lastname" value="">
+    <label>Email</label>
+    <input type="text" id="email" name="email" value="">
+    <label>Password</label>
+    <input type="text" id="password" name="password" value="">
+</div>
+<div class="input-group">
+    <button class="btn" type="button" id="addNew">Save</button>
+</div>
+
+<p/>
+
+<table border="1" cellspacing="0" cellpadding="5">
+    <tr>
+        <th>Id</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Email</th>
+        <th>Action</th>
+    </tr>
+</table>
+
+<input style="margin-top: 30px" id="back-page" class="btn" type="submit" value="Back Page">
+
+<input style="margin-top: 30px" id="logout" class="btn" type="submit" value="Logout">
 
 </body>
 </html>

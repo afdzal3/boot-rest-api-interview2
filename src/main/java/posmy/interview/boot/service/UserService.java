@@ -1,13 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
 package posmy.interview.boot.service;
-/**
- *
- * @author afdzal
- */
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +15,8 @@ import posmy.interview.boot.security.JwtTokenProvider;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +29,11 @@ public class UserService {
 
   public String signin(String username, String password) {
     try {
+      if (userRepository.findByEmailAndIsActive(username, true) == null ){
+        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid username/password supplied");
+      }
       authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
-      return jwtTokenProvider.createToken(username, userRepository.findByEmail(username).getAppUserRoles());
+      return jwtTokenProvider.createToken(username, userRepository.findByEmailAndIsActive(username, true).getAppUserRoles());
     } catch (AuthenticationException e) {
       throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid username/password supplied");
     }
@@ -57,8 +53,26 @@ public class UserService {
     }
   }
 
+
+  public String updateUser(Users appUser) {
+    Optional<Users> users = userRepository.findById(appUser.getId());
+    if (users.isPresent()){
+      users.get().setFirstname(appUser.getFirstname());
+      users.get().setLastname(appUser.getLastname());
+      userRepository.save(users.get());
+      return "saved";
+    }
+    return "no";
+  }
+
   public void delete(String username) {
-    userRepository.deleteByEmail(username);
+    Users users = userRepository.findByEmail(username);
+    users.setIsActive(false);
+    userRepository.save(users);
+  }
+
+  public List<Users> getAllUsers(){
+    return userRepository.findAllByIsActive(true);
   }
 
   public Users search(String username) {
